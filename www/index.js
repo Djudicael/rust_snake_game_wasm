@@ -1,6 +1,6 @@
 import init, { World, Direction } from "snake_game";
 
-init().then(_ => {
+init().then(wasm => {
 
     const CELL_SIZE = 20;
     const WORLD_WIDTH = 8;
@@ -11,6 +11,14 @@ init().then(_ => {
     const context = canvas.getContext("2d");
     canvas.height = worldWith * CELL_SIZE;
     canvas.width = worldWith * CELL_SIZE;
+
+    // const snakeCellPtr = world.snake_cells();
+    // const snakeLen = world.snake_length();
+    // // debugger
+
+    // const snakeCells = new Uint32Array(wasm.memory.buffer, snakeCellPtr, snakeLen);
+
+
 
     document.addEventListener("keydown", (event) => {
         // console.log(event.code);
@@ -50,17 +58,22 @@ init().then(_ => {
     }
 
     function drawSnake() {
-        const snakeIdx = world.snake_head_idx();
-        const col = snakeIdx % worldWith;
-        const row = Math.floor(snakeIdx / worldWith);
-        context.beginPath();
-        context.fillRect(
-            col * CELL_SIZE,
-            row * CELL_SIZE,
-            CELL_SIZE,
-            CELL_SIZE);
+        const snakeCells = new Uint32Array(wasm.memory.buffer, world.snake_cells(), world.snake_length());
+        snakeCells.forEach((cellIdx, i) => {
+            const col = cellIdx % worldWith;
+            const row = Math.floor(cellIdx / worldWith);
+            context.fillStyle = i === 0 ? "#7878db" : "#000000";
+            context.beginPath();
+            context.fillRect(
+                col * CELL_SIZE,
+                row * CELL_SIZE,
+                CELL_SIZE,
+                CELL_SIZE);
+        });
+
         context.stroke();
     }
+
 
     function paint() {
         drawWorld();
@@ -71,7 +84,7 @@ init().then(_ => {
         const fps = 5;
         setTimeout(() => {
             context.clearRect(0, 0, canvas.width, canvas.height);
-            world.update();
+            world.step();
             paint();
 
             // the requestAnimationFrame take a call back to be invoke before the next repaint
