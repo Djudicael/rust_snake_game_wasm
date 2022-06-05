@@ -1,4 +1,4 @@
-import init, { World, Direction } from "snake_game";
+import init, { World, Direction, GameStatus } from "snake_game";
 import { rnd } from "./utils/random";
 
 init().then(wasm => {
@@ -8,6 +8,7 @@ init().then(wasm => {
     const snakeSpawnIdx = rnd(WORLD_WIDTH * WORLD_WIDTH);
     const world = World.new(WORLD_WIDTH, snakeSpawnIdx);
     const worldWith = world.width();
+    const points = document.getElementById('points');
     const gameControlBtn = document.getElementById('game-control-btn');
     const gameStatus = document.getElementById('game-status');
     const canvas = document.getElementById('snake-canvas');
@@ -88,23 +89,31 @@ init().then(wasm => {
 
         // console.log(snakeCells)
         // debugger
-        snakeCells.forEach((cellIdx, i) => {
-            const col = cellIdx % worldWith;
-            const row = Math.floor(cellIdx / worldWith);
-            context.fillStyle = i === 0 ? "#7878db" : "#000000";
-            context.beginPath();
-            context.fillRect(
-                col * CELL_SIZE,
-                row * CELL_SIZE,
-                CELL_SIZE,
-                CELL_SIZE);
-        });
+        snakeCells
+            // .filter((cellIdx, i) => !(i > 0 && cellIdx === snakeCells[0]))
+            .slice()
+            .reverse()
+            .forEach((cellIdx, i) => {
+                const col = cellIdx % worldWith;
+                const row = Math.floor(cellIdx / worldWith);
+                context.fillStyle = i === snakeCells.length - 1 ? "#7878db" : "#000000";
+                // context.fillStyle = i === 0 ? "#7878db" : "#000000";
+                context.beginPath();
+                context.fillRect(
+                    col * CELL_SIZE,
+                    row * CELL_SIZE,
+                    CELL_SIZE,
+                    CELL_SIZE);
+            });
 
         context.stroke();
     }
 
     function drawGameStatus() {
+
         gameStatus.textContent = world.game_status_text();
+        points.textContent = world.points().toString();
+
     }
 
 
@@ -116,7 +125,12 @@ init().then(wasm => {
     }
 
     function play() {
-        const fps = 10;
+        const status = world.game_status();
+        if (status == GameStatus.Won || status == GameStatus.Lost) {
+            gameControlBtn.textContent = "Re-Play";
+            return;
+        }
+        const fps = 5;
         setTimeout(() => {
             context.clearRect(0, 0, canvas.width, canvas.height);
             world.step();
