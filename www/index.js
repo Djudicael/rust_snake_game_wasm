@@ -1,22 +1,31 @@
 import init, { World, Direction } from "snake_game";
+import { rnd } from "./utils/random";
 
 init().then(wasm => {
 
     const CELL_SIZE = 20;
     const WORLD_WIDTH = 8;
-    const snakeSpawnIdx = Date.now() % (WORLD_WIDTH * WORLD_WIDTH);
+    const snakeSpawnIdx = rnd(WORLD_WIDTH * WORLD_WIDTH);
     const world = World.new(WORLD_WIDTH, snakeSpawnIdx);
     const worldWith = world.width();
+    const gameControlBtn = document.getElementById('game-control-btn');
+    const gameStatus = document.getElementById('game-status');
     const canvas = document.getElementById('snake-canvas');
     const context = canvas.getContext("2d");
     canvas.height = worldWith * CELL_SIZE;
     canvas.width = worldWith * CELL_SIZE;
 
-    // const snakeCellPtr = world.snake_cells();
-    // const snakeLen = world.snake_length();
-    // // debugger
-
-    // const snakeCells = new Uint32Array(wasm.memory.buffer, snakeCellPtr, snakeLen);
+    gameControlBtn.addEventListener("click", _ => {
+        const status = world.game_status();
+        if (status === undefined) {
+            world.start_game();
+            play();
+            gameControlBtn.textContent = " Playing ...";
+        } else {
+            // will reload the browser
+            location.reload();
+        }
+    })
 
 
 
@@ -57,8 +66,28 @@ init().then(wasm => {
         context.stroke();
     }
 
+    function drawReward() {
+        const idx = world.reward_cell();
+        const col = idx % worldWith;
+        const row = Math.floor(idx / worldWith);
+        context.beginPath();
+        context.fillStyle = "#FF0000";
+        context.fillRect(
+            col * CELL_SIZE,
+            row * CELL_SIZE,
+            CELL_SIZE,
+            CELL_SIZE);
+        context.stroke();
+        if (idx == 1000) {
+            alert("You won");
+        }
+    }
+
     function drawSnake() {
         const snakeCells = new Uint32Array(wasm.memory.buffer, world.snake_cells(), world.snake_length());
+
+        // console.log(snakeCells)
+        // debugger
         snakeCells.forEach((cellIdx, i) => {
             const col = cellIdx % worldWith;
             const row = Math.floor(cellIdx / worldWith);
@@ -74,26 +103,32 @@ init().then(wasm => {
         context.stroke();
     }
 
+    function drawGameStatus() {
+        gameStatus.textContent = world.game_status_text();
+    }
+
 
     function paint() {
         drawWorld();
         drawSnake();
+        drawReward();
+        drawGameStatus();
     }
 
-    function update() {
-        const fps = 5;
+    function play() {
+        const fps = 10;
         setTimeout(() => {
             context.clearRect(0, 0, canvas.width, canvas.height);
             world.step();
             paint();
 
             // the requestAnimationFrame take a call back to be invoke before the next repaint
-            requestAnimationFrame(update);
+            requestAnimationFrame(play);
         }, 1000 / fps);
     }
 
     paint();
-    update();
+    play();
 
 
 })
